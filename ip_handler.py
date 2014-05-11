@@ -1,16 +1,11 @@
 #!/usr/bin/env python
 import webapp2
 
-import auth
 import models
 import json
 
 class IPHandler(webapp2.RequestHandler):
     def get(self, output_format, ip):
-        authenticated = auth.basicAuth(self)
-        if authenticated != True:
-            return
-        
         if ip == "self" or ip is None:
             ip = self.request.remote_addr
 
@@ -35,4 +30,20 @@ class IPHandler(webapp2.RequestHandler):
         else:
             self.response.set_status(404)
 
-app = webapp2.WSGIApplication([('/([^/]+)?/([^/]+)?', IPHandler)])
+
+class JsonPHandler(webapp2.RequestHandler):
+	def get(self, callback, ip):
+		if ip == "self" or ip is None:
+			ip = self.request.remote_addr
+
+		entry=models.getIpInfo(ip)
+		if entry is not None:
+			self.response.out.write(callback + "(");
+			entry['ip'] = ip
+			json.dump(entry, self.response.out)
+			self.response.out.write(");");
+			self.response.set_status(200)
+		else:
+			self.response.set_status(404)
+app = webapp2.WSGIApplication([('/jsonp/([^/]+)?/([^/]+)?', JsonPHandler),
+							   ('/([^/]+)?/([^/]+)?', IPHandler)])
